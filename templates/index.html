@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>El Inspector | Tomo Manuscrito RAE</title>
+
+  <!-- Tipografías editoriales clásicas -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Alegreya:ital,wght@0,400;0,600;0,700;1,400&family=Cinzel:wght@600;700;800&family=Plus+Jakarta+Sans:wght@500;600&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --wood-desk: #140d0a;
+      --leather-outer: #2c180e;
+      --leather-edge: #422415;
+      --gold-corner: #d4a34b;
+      --page-surface: #f9f5ea;
+      --page-shadow: #dfcfab;
+      --spine-dark: rgba(28, 15, 8, 0.58);
+      
+      --ink: #2b221a;
+      --ink-sub: #544537;
+      --ink-muted: #7d6b59;
+      
+      --ribbon-red: #881e14;
+      --err-ink: #991b1b;
+      --ok-ink: #1f5e3b;
+      --gold-tag: #855318;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      min-height: 100vh;
+      background: var(--wood-desk);
+      background-image: 
+        radial-gradient(ellipse at center, rgba(65, 41, 26, 0.45) 0%, rgba(10, 6, 4, 0.98) 100%),
+        repeating-linear-gradient(45deg, rgba(255,255,255,0.012) 0px, rgba(255,255,255,0.012) 1px, transparent 1px, transparent 6px);
+      color: var(--ink);
+      font-family: 'Alegreya', Georgia, serif;
+      padding: 0.8rem 0.5rem;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    /* CONTENEDOR EXPANDIDO */
+    .book-wrapper {
+      width: 98%;
+      max-width: 1720px;
+      position: relative;
+      padding: 10px 18px 14px 18px;
+      background: linear-gradient(135deg, var(--leather-edge) 0%, var(--leather-outer) 100%);
+      border-radius: 16px;
+      box-shadow: 
+        0 20px 60px rgba(0, 0, 0, 0.85),
+        0 8px 20px rgba(0, 0, 0, 0.6),
+        inset 0 0 15px rgba(0, 0, 0, 0.7);
+    }
+
+    /* Cantoneras Doradas */
+    .corner {
+      position: absolute;
+      width: 44px;
+      height: 44px;
+      border: 3.5px solid var(--gold-corner);
+      pointer-events: none;
+      z-index: 20;
+    }
+    .corner-tl { top: 5px; left: 6px; border-right: none; border-bottom: none; border-top-left-radius: 12px; }
+    .corner-tr { top: 5px; right: 6px; border-left: none; border-bottom: none; border-top-right-radius: 12px; }
+    .corner-bl { bottom: 6px; left: 6px; border-right: none; border-top: none; border-bottom-left-radius: 12px; }
+    .corner-br { bottom: 6px; right: 6px; border-left: none; border-top: none; border-bottom-right-radius: 12px; }
+
+    /* Cinta Marcapáginas */
+    .book-ribbon {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 28px;
+      height: 75px;
+      background: linear-gradient(to right, #9e2318 0%, #ba3124 50%, #75140c 100%);
+      box-shadow: 2px 6px 14px rgba(0,0,0,0.55);
+      z-index: 25;
+      clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 50% 82%, 0% 100%);
+    }
+
+    /* ESTRUCTURA DEL LIBRO */
+    .book-block {
+      display: flex;
+      position: relative;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 12px 24px rgba(0,0,0,0.45);
+    }
+
+    .page-edges-left {
+      width: 20px;
+      flex-shrink: 0;
+      background: 
+        repeating-linear-gradient(to right, #bda27e 0px, #e8dcbf 2px, #9e8460 3px, #e8dcbf 4px),
+        linear-gradient(to right, rgba(0,0,0,0.35) 0%, transparent 100%);
+      box-shadow: inset -3px 0 6px rgba(0,0,0,0.25);
+    }
+
+    .page-edges-right {
+      width: 20px;
+      flex-shrink: 0;
+      background: 
+        repeating-linear-gradient(to right, #e8dcbf 0px, #9e8460 1px, #e8dcbf 2px, #bda27e 4px),
+        linear-gradient(to left, rgba(0,0,0,0.35) 0%, transparent 100%);
+      box-shadow: inset 3px 0 6px rgba(0,0,0,0.25);
+    }
+
+    @media (max-width: 900px) {
+      .page-edges-left, .page-edges-right {
+        display: none;
+      }
+    }
+
+    .open-book-pages {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      position: relative;
+      background: var(--page-surface);
+      border-bottom: 7px solid #cfbfa0;
+      box-shadow: inset 0 -4px 6px rgba(90, 70, 50, 0.2);
+    }
+
+    @media (max-width: 950px) {
+      .open-book-pages {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .book-spine-crease {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 50%;
+      width: 60px;
+      transform: translateX(-50%);
+      background: linear-gradient(to right, 
+        rgba(0,0,0,0) 0%, 
+        var(--spine-dark) 40%, 
+        rgba(15, 8, 4, 0.75) 50%, 
+        var(--spine-dark) 60%, 
+        rgba(0,0,0,0) 100%);
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    @media (max-width: 950px) {
+      .book-spine-crease {
+        display: none;
+      }
+    }
+
+    .page-left {
+      padding: 2.2rem 2.8rem 2.2rem 3rem;
+      background: linear-gradient(to right, #fbf7ee 82%, var(--page-shadow) 100%);
+      display: flex;
+      flex-direction: column;
+      gap: 1.4rem;
+      border-right: 1px solid rgba(138, 109, 74, 0.25);
+    }
+
+    .page-right {
+      padding: 2.2rem 3rem 2.2rem 2.8rem;
+      background: linear-gradient(to left, #fbf7ee 82%, var(--page-shadow) 100%);
+      display: flex;
+      flex-direction: column;
+      gap: 1.4rem;
+    }
+
+    header {
+      text-align: center;
+      border-bottom: 2px double #bda06b;
+      padding-bottom: 0.8rem;
+    }
+
+    .brand-title {
+      font-family: 'Cinzel', serif;
+      font-size: 2.35rem;
+      font-weight: 700;
+      color: var(--ribbon-red);
+      letter-spacing: 0.05em;
+      text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.85);
+    }
+
+    .brand-subtitle {
+      font-size: 0.98rem;
+      font-style: italic;
+      color: var(--ink-muted);
+      margin-top: 0.2rem;
+    }
+
+    .folio-block {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+
+    .folio-title {
+      font-family: 'Cinzel', serif;
+      font-size: 0.88rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      color: var(--ink-sub);
+      text-transform: uppercase;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px dashed #c4ad82;
+      padding-bottom: 0.35rem;
+    }
+
+    textarea {
+      width: 100%;
+      height: 180px;
+      background: #fffdf9;
+      border: 1px solid #d9cbaf;
+      border-radius: 6px;
+      padding: 1.1rem;
+      color: var(--ink);
+      font-family: 'Alegreya', Georgia, serif;
+      font-size: 1.15rem;
+      line-height: 1.7;
+      resize: vertical;
+      outline: none;
+      box-shadow: inset 1px 2px 6px rgba(80, 60, 40, 0.08);
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    textarea:focus {
+      border-color: #bda06b;
+      box-shadow: 0 0 0 3px rgba(189, 160, 107, 0.25), inset 1px 2px 6px rgba(80, 60, 40, 0.08);
+    }
+
+    .btn-audit {
+      background: linear-gradient(135deg, var(--ribbon-red) 0%, #681710 100%);
+      color: #fcefd6;
+      border: 1px solid #50120b;
+      border-radius: 25px;
+      padding: 0.85rem 1.9rem;
+      font-family: 'Cinzel', serif;
+      font-size: 0.92rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.6rem;
+      align-self: flex-start;
+      box-shadow: 0 4px 12px rgba(104, 23, 16, 0.35);
+      transition: all 0.2s ease;
+    }
+
+    .btn-audit:hover:not(:disabled) {
+      background: linear-gradient(135deg, #a3271c 0%, #59130b 100%);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(104, 23, 16, 0.45);
+    }
+
+    .btn-audit:disabled {
+      opacity: 0.65;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .spinner {
+      width: 15px;
+      height: 15px;
+      border: 2px solid rgba(252, 239, 214, 0.3);
+      border-top-color: #fcefd6;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      display: none;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .cards-container {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      max-height: 380px;
+      overflow-y: auto;
+      padding-right: 0.35rem;
+    }
+
+    .cards-container::-webkit-scrollbar {
+      width: 5px;
+    }
+    .cards-container::-webkit-scrollbar-thumb {
+      background: #d8c8a6;
+      border-radius: 4px;
+    }
+
+    .rule-card {
+      background: #fffdfa;
+      border: 1px solid #dfd3ba;
+      border-left: 4px solid var(--ribbon-red);
+      border-radius: 5px;
+      padding: 0.8rem 0.95rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      box-shadow: 0 1px 3px rgba(60, 45, 30, 0.04);
+    }
+
+    .rule-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .rule-words {
+      font-size: 1.05rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+    }
+
+    .word-err {
+      color: var(--err-ink);
+      text-decoration: line-through;
+    }
+
+    .word-ok {
+      color: var(--ok-ink);
+    }
+
+    .rule-tag {
+      background: #f1e6cd;
+      border: 1px solid #ddcca6;
+      color: var(--ink-muted);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 0.66rem;
+      font-weight: 600;
+      padding: 0.15rem 0.5rem;
+      border-radius: 3px;
+      text-transform: uppercase;
+    }
+
+    .rule-norm {
+      font-size: 0.94rem;
+      color: var(--ink);
+      line-height: 1.45;
+    }
+
+    .rule-desc {
+      font-size: 0.86rem;
+      color: var(--ink-muted);
+      font-style: italic;
+    }
+
+    .rule-desamb {
+      background: #fef7e6;
+      border: 1px solid #ebd39f;
+      border-radius: 5px;
+      padding: 0.45rem 0.65rem;
+      font-size: 0.88rem;
+      color: var(--gold-tag);
+      line-height: 1.4;
+    }
+
+    .text-output {
+      background: #fffdfa;
+      border: 1px solid #ded0b4;
+      border-radius: 6px;
+      padding: 1.2rem;
+      font-size: 1.15rem;
+      line-height: 1.75;
+      color: #17120e;
+      min-height: 250px;
+      white-space: pre-wrap;
+      box-shadow: inset 1px 2px 5px rgba(80, 60, 40, 0.05);
+    }
+
+    .btn-copy {
+      background: #f2e7cd;
+      border: 1px solid #d4c29d;
+      color: var(--ink-sub);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 0.76rem;
+      font-weight: 600;
+      padding: 0.25rem 0.7rem;
+      border-radius: 4px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      transition: all 0.2s ease;
+    }
+
+    .btn-copy:hover {
+      background: #e5d7b5;
+      color: var(--ink);
+    }
+
+    .btn-copy.copied {
+      background: #e2f0e7;
+      border-color: #abd2b9;
+      color: var(--ok-ink);
+    }
+
+    .badge-counter {
+      background: #fbe6e3;
+      border: 1px solid #f2bdb5;
+      color: var(--err-ink);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 0.74rem;
+      font-weight: 600;
+      padding: 0.15rem 0.55rem;
+      border-radius: 12px;
+    }
+
+    .style-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.9rem;
+    }
+
+    .style-box {
+      background: #fffdfa;
+      border: 1px solid #dfd3ba;
+      border-radius: 6px;
+      padding: 0.95rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    .style-title {
+      font-family: 'Cinzel', serif;
+      font-size: 0.76rem;
+      font-weight: 700;
+      color: var(--ribbon-red);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .style-content {
+      font-size: 0.95rem;
+      line-height: 1.55;
+      color: var(--ink-sub);
+    }
+
+    .style-notes {
+      border-top: 1px dashed #c4ad82;
+      padding-top: 0.7rem;
+      font-size: 0.92rem;
+      color: var(--ink-muted);
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TOMO PRINCIPAL EN PANTALLA COMPLETA -->
+  <div class="book-wrapper">
+    <!-- Cantoneras Doradas -->
+    <div class="corner corner-tl"></div>
+    <div class="corner corner-tr"></div>
+    <div class="corner corner-bl"></div>
+    <div class="corner corner-br"></div>
+
+    <!-- Cinta de Seda Roja -->
+    <div class="book-ribbon"></div>
+
+    <!-- BLOQUE DEL LIBRO CON CANTOS DE HOJAS APILADAS -->
+    <div class="book-block">
+      <!-- Canto izquierdo -->
+      <div class="page-edges-left"></div>
+
+      <!-- PÁGINAS ABIERTAS -->
+      <div class="open-book-pages">
+        <div class="book-spine-crease"></div>
+
+        <!-- PÁGINA IZQUIERDA -->
+        <div class="page-left">
+          <header>
+            <div class="brand-title">El Inspector</div>
+            <p class="brand-subtitle">Códice de corrección ortográfica y fundamentación lógica formal</p>
+          </header>
+
+          <!-- Entrada -->
+          <section class="folio-block">
+            <div class="folio-title">
+              <span>✒️ Manuscrito original a auditar</span>
+            </div>
+            <textarea id="textoInput" placeholder="Escribe o copia aquí el pasaje que deseas someter a auditoría ortográfica..."></textarea>
+            
+            <button id="btnAuditar" class="btn-audit" onclick="ejecutarAuditoria()">
+              <span id="spinner" class="spinner"></span>
+              <span id="btnText">Analizar faltas de ortografía</span>
+            </button>
+          </section>
+
+          <!-- Dictamen y Reglas -->
+          <section class="folio-block">
+            <div class="folio-title">
+              <span>📜 Dictamen y Reglas</span>
+              <span id="badgeContador" class="badge-counter" style="display:none;">0 faltas</span>
+            </div>
+            <div id="contenedorReglas" class="cards-container">
+              <p style="color: var(--ink-muted); font-size: 0.95rem; font-style: italic;">A la espera de un manuscrito para revisar...</p>
+            </div>
+          </section>
+        </div>
+
+        <!-- PÁGINA DERECHA -->
+        <div class="page-right">
+          <!-- Manuscrito Restaurado -->
+          <section class="folio-block">
+            <div class="folio-title">
+              <span>📖 Manuscrito Restaurado</span>
+              <button id="btnCopiar" class="btn-copy" onclick="copiarTextoCorregido()">
+                <span id="btnCopiarIcon">📋</span>
+                <span id="btnCopiarText">Copiar</span>
+              </button>
+            </div>
+            <div id="textoCorregido" class="text-output">Sin anotaciones pendientes.</div>
+          </section>
+
+          <!-- Variantes y Estilo -->
+          <section class="folio-block">
+            <div class="folio-title">
+              <span>🕯️ Variantes de Estilo y Sugerencias</span>
+            </div>
+            <div class="style-grid">
+              <div class="style-box">
+                <div class="style-title">Registro Formal / Académico</div>
+                <div id="estiloAcademico" class="style-content">Esperando análisis...</div>
+              </div>
+              <div class="style-box">
+                <div class="style-title">Registro Divulgativo</div>
+                <div id="estiloDivulgativo" class="style-content">Esperando análisis...</div>
+              </div>
+            </div>
+            <div id="estiloObservacion" class="style-notes">
+              💡 <strong>Nota del Editor:</strong> Al auditar el manuscrito, se mostrarán observaciones morfosintácticas y de coherencia.
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <!-- Canto derecho -->
+      <div class="page-edges-right"></div>
+    </div>
+  </div>
+
+  <script>
+    let auditando = false;
+    let ultimoTextoAuditado = "";
+
+    async function ejecutarAuditoria() {
+      const input = document.getElementById("textoInput");
+      const btn = document.getElementById("btnAuditar");
+      const btnText = document.getElementById("btnText");
+      const spinner = document.getElementById("spinner");
+
+      const texto = input.value.trim();
+      if (!texto || auditando || texto === ultimoTextoAuditado) return;
+
+      auditando = true;
+      btn.disabled = true;
+      btnText.textContent = "Analizando faltas de ortografía...";
+      spinner.style.display = "inline-block";
+
+      try {
+        const respuesta = await fetch("/auditar", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ texto: texto })
+        });
+
+        const data = await respuesta.json();
+        ultimoTextoAuditado = texto;
+
+        // Texto corregido
+        document.getElementById("textoCorregido").textContent = data.texto_corregido || "Sin modificaciones.";
+
+        // Reglas de Prolog
+        const contReglas = document.getElementById("contenedorReglas");
+        const badge = document.getElementById("badgeContador");
+        contReglas.innerHTML = "";
+
+        if (data.errores && data.errores.length > 0) {
+          badge.style.display = "inline-block";
+          badge.textContent = `${data.errores.length} faltas halladas`;
+
+          data.errores.forEach(err => {
+            const card = document.createElement("div");
+            card.className = "rule-card";
+
+            let desambHTML = "";
+            if (err.alternativa) {
+              desambHTML = `
+                <div class="rule-desamb">
+                  <span>💡 <strong>Duda contextual:</strong> ¿Quisiste decir <em>'${err.corregida}'</em> o <em>'${err.alternativa}'</em>?</span>
+                </div>
+              `;
+            }
+
+            card.innerHTML = `
+              <div class="rule-top">
+                <div class="rule-words">
+                  <span class="word-err">${err.original}</span>
+                  <span style="color: var(--ink-muted); font-weight: normal;">➔</span>
+                  <span class="word-ok">${err.corregida}</span>
+                </div>
+                <span class="rule-tag">${err.categoria || "Norma RAE"}</span>
+              </div>
+              <div class="rule-norm"><strong>Fundamento:</strong> ${err.fundamento || "Ajuste morfosintáctico."}</div>
+              ${err.nota ? `<div class="rule-desc">${err.nota}</div>` : ""}
+              ${desambHTML}
+            `;
+            contReglas.appendChild(card);
+          });
+        } else {
+          badge.style.display = "none";
+          contReglas.innerHTML = '<p style="color: var(--ok-ink); font-size: 1rem; font-weight: 600;">✔ El manuscrito no presenta faltas ortográficas.</p>';
+        }
+
+        // Variantes de estilo
+        if (data.estilo) {
+          document.getElementById("estiloAcademico").textContent = data.estilo.academico || "Sin propuesta disponible.";
+          document.getElementById("estiloDivulgativo").textContent = data.estilo.divulgativo || "Sin propuesta disponible.";
+          document.getElementById("estiloObservacion").innerHTML = `💡 <strong>Nota del Editor:</strong> ${data.estilo.observacion || "Prosa con fluidez adecuada."}`;
+        }
+
+      } catch (error) {
+        console.error("Error al auditar:", error);
+      } finally {
+        auditando = false;
+        btn.disabled = false;
+        btnText.textContent = "Analizar faltas de ortografía";
+        spinner.style.display = "none";
+      }
+    }
+
+    // Copiar al portapapeles
+    function copiarTextoCorregido() {
+      const texto = document.getElementById("textoCorregido").innerText;
+      if (!texto || texto === "Sin anotaciones pendientes.") return;
+
+      navigator.clipboard.writeText(texto).then(() => {
+        const btn = document.getElementById("btnCopiar");
+        const btnIcon = document.getElementById("btnCopiarIcon");
+        const btnText = document.getElementById("btnCopiarText");
+
+        btn.classList.add("copied");
+        btnIcon.textContent = "✓";
+        btnText.textContent = "Copiado";
+
+        setTimeout(() => {
+          btn.classList.remove("copied");
+          btnIcon.textContent = "📋";
+          btnText.textContent = "Copiar";
+        }, 2000);
+      });
+    }
+
+    // --- DISPARADORES AUTOMÁTICOS (DEBOUNCE) ---
+    let temporizadorEscritura;
+    const areaTexto = document.getElementById("textoInput");
+
+    // Al escribir: si el usuario deja de teclear por 1.2 segundos, audita automáticamente
+    areaTexto.addEventListener("input", () => {
+      clearTimeout(temporizadorEscritura);
+      const texto = areaTexto.value.trim();
+
+      if (texto.length > 15) {
+        temporizadorEscritura = setTimeout(() => {
+          ejecutarAuditoria();
+        }, 1200);
+      }
+    });
+
+    // Al pegar un texto: audita de inmediato tras 300 milisegundos
+    areaTexto.addEventListener("paste", () => {
+      clearTimeout(temporizadorEscritura);
+      temporizadorEscritura = setTimeout(() => {
+        ejecutarAuditoria();
+      }, 300);
+    });
+  </script>
+</body>
+</html>

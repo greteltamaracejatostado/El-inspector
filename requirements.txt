@@ -1,0 +1,4 @@
+flask
+pyswip
+google-genai
+gunicorn
