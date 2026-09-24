@@ -700,5 +700,35 @@
       }, 300);
     });
   </script>
+  <script>
+  // Bloquear el menú contextual (clic derecho)
+  document.addEventListener('contextmenu', function (e) {
+    e.preventDefault();
+  });
+
+  // Bloquear atajos comunes de inspección y herramientas de desarrollo
+  document.addEventListener('keydown', function (e) {
+    // F12
+    if (e.keyCode === 123) {
+      e.preventDefault();
+      return false;
+    }
+    // Ctrl + U (Ver código fuente)
+    if (e.ctrlKey && (e.keyCode === 85 || e.key === 'u' || e.key === 'U')) {
+      e.preventDefault();
+      return false;
+    }
+    // Ctrl + Shift + I o Ctrl + Shift + J (Inspeccionar elemento / Consola)
+    if (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74 || e.key === 'I' || e.key === 'J')) {
+      e.preventDefault();
+      return false;
+    }
+    // Ctrl + S (Guardar página)
+    if (e.ctrlKey && (e.keyCode === 83 || e.key === 's' || e.key === 'S')) {
+      e.preventDefault();
+      return false;
+    }
+  });
+</script>
 </body>
 </html>
