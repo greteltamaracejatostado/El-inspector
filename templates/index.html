@@ -701,36 +701,27 @@
     });
   </script>
  <script>
-  // 1. Deshabilitar menú contextual (clic derecho) en toda la ventana
+  // 1. Permitir clic derecho SOLO si es una caja de texto/input, bloquear en el resto
   window.addEventListener('contextmenu', function (e) {
-    e.preventDefault();
-    e.stopPropagation();
-    return false;
-  }, true);
+    const esCampoEditable = e.target.tagName === 'TEXTAREA' || 
+                            e.target.tagName === 'INPUT' || 
+                            e.target.isContentEditable;
+    
+    if (!esCampoEditable) {
+      e.preventDefault();
+      return false;
+    }
+  }, false);
 
-  // 2. Bloquear la tecla física de menú del teclado y atajos
+  // 2. Bloquear atajos de inspección y guardado sin interferir con Ctrl+C / Ctrl+V / Ctrl+X
   window.addEventListener('keydown', function (e) {
-    // Tecla ContextMenu (la tecla del teclado que abre el clic derecho)
-    if (e.key === 'ContextMenu' || e.keyCode === 93) {
-      e.preventDefault();
-      e.stopPropagation();
-      return false;
-    }
-
-    // Shift + F10 (atajo de Windows/teclado que abre el clic derecho)
-    if (e.shiftKey && (e.key === 'F10' || e.keyCode === 121)) {
-      e.preventDefault();
-      e.stopPropagation();
-      return false;
-    }
-
     // F12
     if (e.key === 'F12' || e.keyCode === 123) {
       e.preventDefault();
       return false;
     }
 
-    // Ctrl + U (Ver fuente)
+    // Ctrl + U (Ver código fuente)
     if (e.ctrlKey && (e.key === 'u' || e.key === 'U' || e.keyCode === 85)) {
       e.preventDefault();
       return false;
@@ -742,12 +733,12 @@
       return false;
     }
 
-    // Ctrl + Shift + I / J / C (Inspeccionar / Consola)
+    // Ctrl + Shift + I / J / C (Herramientas de desarrollador)
     if (e.ctrlKey && e.shiftKey && ['I', 'J', 'C', 'i', 'j', 'c'].includes(e.key)) {
       e.preventDefault();
       return false;
     }
-  }, true);
+  }, false);
 </script>
 </body>
 </html>
