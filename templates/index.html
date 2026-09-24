@@ -700,35 +700,54 @@
       }, 300);
     });
   </script>
-  <script>
-  // Bloquear el menú contextual (clic derecho)
-  document.addEventListener('contextmenu', function (e) {
+ <script>
+  // 1. Deshabilitar menú contextual (clic derecho) en toda la ventana
+  window.addEventListener('contextmenu', function (e) {
     e.preventDefault();
-  });
+    e.stopPropagation();
+    return false;
+  }, true);
 
-  // Bloquear atajos comunes de inspección y herramientas de desarrollo
-  document.addEventListener('keydown', function (e) {
+  // 2. Bloquear la tecla física de menú del teclado y atajos
+  window.addEventListener('keydown', function (e) {
+    // Tecla ContextMenu (la tecla del teclado que abre el clic derecho)
+    if (e.key === 'ContextMenu' || e.keyCode === 93) {
+      e.preventDefault();
+      e.stopPropagation();
+      return false;
+    }
+
+    // Shift + F10 (atajo de Windows/teclado que abre el clic derecho)
+    if (e.shiftKey && (e.key === 'F10' || e.keyCode === 121)) {
+      e.preventDefault();
+      e.stopPropagation();
+      return false;
+    }
+
     // F12
-    if (e.keyCode === 123) {
+    if (e.key === 'F12' || e.keyCode === 123) {
       e.preventDefault();
       return false;
     }
-    // Ctrl + U (Ver código fuente)
-    if (e.ctrlKey && (e.keyCode === 85 || e.key === 'u' || e.key === 'U')) {
+
+    // Ctrl + U (Ver fuente)
+    if (e.ctrlKey && (e.key === 'u' || e.key === 'U' || e.keyCode === 85)) {
       e.preventDefault();
       return false;
     }
-    // Ctrl + Shift + I o Ctrl + Shift + J (Inspeccionar elemento / Consola)
-    if (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74 || e.key === 'I' || e.key === 'J')) {
-      e.preventDefault();
-      return false;
-    }
+
     // Ctrl + S (Guardar página)
-    if (e.ctrlKey && (e.keyCode === 83 || e.key === 's' || e.key === 'S')) {
+    if (e.ctrlKey && (e.key === 's' || e.key === 'S' || e.keyCode === 83)) {
       e.preventDefault();
       return false;
     }
-  });
+
+    // Ctrl + Shift + I / J / C (Inspeccionar / Consola)
+    if (e.ctrlKey && e.shiftKey && ['I', 'J', 'C', 'i', 'j', 'c'].includes(e.key)) {
+      e.preventDefault();
+      return false;
+    }
+  }, true);
 </script>
 </body>
 </html>
