@@ -701,18 +701,7 @@
     });
   </script>
  <script>
-  // 1. Permitir clic derecho SOLO si es una caja de texto/input, bloquear en el resto
-  window.addEventListener('contextmenu', function (e) {
-    const esCampoEditable = e.target.tagName === 'TEXTAREA' || 
-                            e.target.tagName === 'INPUT' || 
-                            e.target.isContentEditable;
-    
-    if (!esCampoEditable) {
-      e.preventDefault();
-      return false;
-    }
-  }, false);
-
+  
   // 2. Bloquear atajos de inspección y guardado sin interferir con Ctrl+C / Ctrl+V / Ctrl+X
   window.addEventListener('keydown', function (e) {
     // F12
