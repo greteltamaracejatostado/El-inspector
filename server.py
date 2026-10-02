@@ -17,7 +17,7 @@ app = Flask(__name__)
 # ==============================================================================
 # CONFIGURACIÓN DEL CLIENTE IA (GEMINI API)
 # ==============================================================================
-# Se obtiene de la variable de entorno configurada en Render o en el sistema
+# Se obtiene de la variable de entorno configurada en Render
 API_KEY = os.environ.get("GEMINI_API_KEY", "")
 client = genai.Client(api_key=API_KEY)
 
@@ -102,16 +102,17 @@ Devuelve EXCLUSIVAMENTE un JSON válido con esta estructura:
     "observacion": "Comentario general sobre la ortografía y sintaxis"
   }}
 }}
-Nota: en 'errores' incluye CADA una de las palabras corregidas individualmente. 'a' es una alternativa o null."""
+Nota: en 'errores' incluye CADA una de las palabras corregidas individualmente. 'a' es una alternativa léxica o null."""
 
     try:
         respuesta = client.models.generate_content(
-            model='gemini-2.5-flash',
+            model='gemini-3-flash-preview',
             contents=prompt_instrucciones,
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
                 temperature=0.1,
-                max_output_tokens=3000
+                max_output_tokens=3000,
+                thinking_config=types.ThinkingConfig(thinking_budget=0)
             )
         )
 
