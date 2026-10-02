@@ -17,6 +17,7 @@ app = Flask(__name__)
 # ==============================================================================
 # CONFIGURACIÓN DEL CLIENTE IA (GEMINI API)
 # ==============================================================================
+# Se obtiene de la variable de entorno configurada en Render o en el sistema
 API_KEY = os.environ.get("GEMINI_API_KEY", "")
 client = genai.Client(api_key=API_KEY)
 
@@ -84,26 +85,33 @@ def auditar():
             "estilo": {"academico": "", "divulgativo": "", "observacion": ""}
         })
 
-    # Instrucción del sistema estricta y compacta
-    system_inst = (
-        "Auditor ortográfico RAE ultrarrápido. "
-        "Devuelve únicamente un objeto JSON con este formato exacto: "
-        "{\"errores\": [{\"o\": \"palabra_erronea\", \"c\": \"palabra_corregida\", \"a\": null}], "
-        "\"estilo\": {\"academico\": \"reescritura formal breve\", \"divulgativo\": \"reescritura fluida breve\", \"observacion\": \"apunte sintáctico breve\"}}. "
-        "'a' es una alternativa léxica o null si no aplica."
-    )
+    prompt_instrucciones = f"""Actúa como un auditor ortográfico estricto de la Real Academia Española (RAE).
+Corrige minuciosamente todos los errores de grafías (b/v, c/s/z, g/j, ll/y, h), acentuación (tildes diacríticas, agudas, llanas, esdrújulas) y separación/unión de palabras del siguiente texto:
+
+"{texto}"
+
+Devuelve EXCLUSIVAMENTE un JSON válido con esta estructura:
+{{
+  "texto_corregido": "texto completo corregido con máxima fidelidad",
+  "errores": [
+    {{"o": "palabra_con_error", "c": "palabra_corregida", "a": null}}
+  ],
+  "estilo": {{
+    "academico": "Reescritura en registro formal o académico",
+    "divulgativo": "Reescritura en registro fluido o divulgativo",
+    "observacion": "Comentario general sobre la ortografía y sintaxis"
+  }}
+}}
+Nota: en 'errores' incluye CADA una de las palabras corregidas individualmente. 'a' es una alternativa o null."""
 
     try:
-        # Consulta optimizada con límite de tokens y cero presupuesto de razonamiento
         respuesta = client.models.generate_content(
             model='gemini-2.5-flash',
-            contents=texto,
+            contents=prompt_instrucciones,
             config=types.GenerateContentConfig(
-                system_instruction=system_inst,
                 response_mime_type="application/json",
-                temperature=0.0,
-                max_output_tokens=600,
-                thinking_config=types.ThinkingConfig(thinking_budget=0)
+                temperature=0.1,
+                max_output_tokens=3000
             )
         )
 
@@ -126,8 +134,7 @@ def auditar():
             }
         })
 
-    # Reconstrucción instantánea del texto en Python (sin esperar a la IA)
-    texto_reconstruido = texto
+    # Procesar errores encontrados y clasificarlos con Prolog
     hallazgos = []
     lista_errores = resultado_ia.get("errores", [])
 
@@ -139,11 +146,6 @@ def auditar():
         if not orig or not corr:
             continue
 
-        # Reemplazar en el texto manteniendo coherencia
-        patron = rf"\b{re.escape(orig)}\b"
-        texto_reconstruido = re.sub(patron, corr, texto_reconstruido, flags=re.IGNORECASE)
-
-        # Clasificación lógica vía Prolog
         cat_prolog, fund_prolog = clasificar_con_prolog(orig, corr)
 
         hallazgos.append({
@@ -157,7 +159,7 @@ def auditar():
 
     return jsonify({
         "errores": hallazgos,
-        "texto_corregido": texto_reconstruido,
+        "texto_corregido": resultado_ia.get("texto_corregido", texto),
         "estilo": resultado_ia.get("estilo", {})
     })
 
