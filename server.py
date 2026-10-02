@@ -17,7 +17,6 @@ app = Flask(__name__)
 # ==============================================================================
 # CONFIGURACIÓN DEL CLIENTE IA (GEMINI API)
 # ==============================================================================
-# Se obtiene de la variable de entorno configurada en Render o en el sistema
 API_KEY = os.environ.get("GEMINI_API_KEY", "")
 client = genai.Client(api_key=API_KEY)
 
@@ -85,33 +84,25 @@ def auditar():
             "estilo": {"academico": "", "divulgativo": "", "observacion": ""}
         })
 
-    # PROMPT ULTRA-LIGERO: Sin descripciones redundantes para que Gemini genere el JSON al instante
-    prompt_instrucciones = f"""Corrige rigurosamente la ortografía, acentuación y unión/separación de palabras de este texto según la RAE.
-Texto:
-"{texto}"
-
-Devuelve ÚNICAMENTE un JSON con:
-{{
-  "texto_corregido": "texto íntegro corregido",
-  "errores": [
-    {{"o": "error", "c": "corrección", "a": null}}
-  ],
-  "estilo": {{
-    "academico": "versión formal resumida",
-    "divulgativo": "versión clara resumida",
-    "observacion": "apunte sintáctico general"
-  }}
-}}
-Nota: 'a' es una alternativa léxica si hay ambigüedad o null."""
+    # Instrucción del sistema estricta y compacta
+    system_inst = (
+        "Auditor ortográfico RAE ultrarrápido. "
+        "Devuelve únicamente un objeto JSON con este formato exacto: "
+        "{\"errores\": [{\"o\": \"palabra_erronea\", \"c\": \"palabra_corregida\", \"a\": null}], "
+        "\"estilo\": {\"academico\": \"reescritura formal breve\", \"divulgativo\": \"reescritura fluida breve\", \"observacion\": \"apunte sintáctico breve\"}}. "
+        "'a' es una alternativa léxica o null si no aplica."
+    )
 
     try:
-        # Gemini 3 Flash Preview con cero thinking y temperatura 0 para máxima velocidad
+        # Consulta optimizada con límite de tokens y cero presupuesto de razonamiento
         respuesta = client.models.generate_content(
-            model='gemini-3-flash-preview',
-            contents=prompt_instrucciones,
+            model='gemini-2.5-flash',
+            contents=texto,
             config=types.GenerateContentConfig(
+                system_instruction=system_inst,
                 response_mime_type="application/json",
                 temperature=0.0,
+                max_output_tokens=600,
                 thinking_config=types.ThinkingConfig(thinking_budget=0)
             )
         )
@@ -135,7 +126,8 @@ Nota: 'a' es una alternativa léxica si hay ambigüedad o null."""
             }
         })
 
-    # Procesamiento rápido con caché
+    # Reconstrucción instantánea del texto en Python (sin esperar a la IA)
+    texto_reconstruido = texto
     hallazgos = []
     lista_errores = resultado_ia.get("errores", [])
 
@@ -147,6 +139,11 @@ Nota: 'a' es una alternativa léxica si hay ambigüedad o null."""
         if not orig or not corr:
             continue
 
+        # Reemplazar en el texto manteniendo coherencia
+        patron = rf"\b{re.escape(orig)}\b"
+        texto_reconstruido = re.sub(patron, corr, texto_reconstruido, flags=re.IGNORECASE)
+
+        # Clasificación lógica vía Prolog
         cat_prolog, fund_prolog = clasificar_con_prolog(orig, corr)
 
         hallazgos.append({
@@ -160,7 +157,7 @@ Nota: 'a' es una alternativa léxica si hay ambigüedad o null."""
 
     return jsonify({
         "errores": hallazgos,
-        "texto_corregido": resultado_ia.get("texto_corregido", texto),
+        "texto_corregido": texto_reconstruido,
         "estilo": resultado_ia.get("estilo", {})
     })
 
